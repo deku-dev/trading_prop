@@ -2,6 +2,35 @@ class CalculationDatabase {
     constructor() {
         this.risks = JSON.parse(localStorage.getItem('risks') || '{}');
         this.calculationHistory = JSON.parse(localStorage.getItem('calculationHistory') || '[]');
+        this.takenPositions = JSON.parse(localStorage.getItem('takenPositions') || '[]');
+    }
+
+    // Видалення одного запису з історії
+    deleteCalculation(index) {
+        this.calculationHistory.splice(index, 1);
+        localStorage.setItem('calculationHistory', JSON.stringify(this.calculationHistory));
+        this.renderCalculationHistory();
+    }
+
+    // Видалення всіх записів з історії
+    clearAllCalculations() {
+        this.calculationHistory = [];
+        localStorage.setItem('calculationHistory', JSON.stringify(this.calculationHistory));
+        this.renderCalculationHistory();
+    }
+
+    // Видалення однієї взятої позиції
+    deleteTakenPosition(index) {
+        this.takenPositions.splice(index, 1);
+        localStorage.setItem('takenPositions', JSON.stringify(this.takenPositions));
+        this.renderTakenPositions();
+    }
+
+    // Видалення всіх взятих позицій
+    clearAllTakenPositions() {
+        this.takenPositions = [];
+        localStorage.setItem('takenPositions', JSON.stringify(this.takenPositions));
+        this.renderTakenPositions();
     }
 
     setRisk(riskName, value) {
@@ -20,20 +49,28 @@ class CalculationDatabase {
         this.renderRisks();
     }
 
-    addCalculationToHistory(calculation) {
+    // Збереження розрахунків з вхідною строкою
+    addCalculationToHistory(calculation, inputString) {
         const historyEntry = {
             ...calculation,
-            timestamp: new Date().toISOString()
+            inputString,
+            timestamp: new Date().toISOString(),
         };
         this.calculationHistory.unshift(historyEntry);
-        
-        // Limit history to last 10 entries
-        if (this.calculationHistory.length > 10) {
-            this.calculationHistory = this.calculationHistory.slice(0, 10);
-        }
-        
+
+        // Зберігаємо всі записи без обмеження
         localStorage.setItem('calculationHistory', JSON.stringify(this.calculationHistory));
         this.renderCalculationHistory();
+    }
+
+    // Позначення позиції як взятої
+    takePosition(index) {
+        const takenPosition = this.calculationHistory[index];
+        if (takenPosition) {
+            this.takenPositions.push(takenPosition);
+            localStorage.setItem('takenPositions', JSON.stringify(this.takenPositions));
+            this.renderTakenPositions();
+        }
     }
 
     renderRisks() {
@@ -69,6 +106,43 @@ class CalculationDatabase {
         }
     }
 
+    renderTakenPositions() {
+        const takenPositionsContainer = document.getElementById('takenPositionsContainer');
+    
+        if (!takenPositionsContainer) {
+            console.error('Element with ID "takenPositionsContainer" not found.');
+            return;
+        }
+    
+        // Очищаємо контейнер перед оновленням
+        takenPositionsContainer.innerHTML = '';
+    
+        if (this.takenPositions.length === 0) {
+            takenPositionsContainer.innerHTML = '<p id="noTakenPositionsMessage" class="text-gray-500">No positions taken yet</p>';
+            return;
+        }
+    
+        // Рендеримо кожну взяту позицію
+        this.takenPositions.forEach((position, index) => {
+            const div = document.createElement('div');
+            div.className = 'bg-green-50 p-2 mb-2 rounded shadow flex justify-between items-center';
+            div.innerHTML = `
+                <div>
+                    <h4 class="font-semibold">#${position.ticker}</h4>
+                    <p>${position.inputString}</p>
+                    <p class="text-sm text-gray-500">Saved on: ${new Date(position.timestamp).toLocaleString()}</p>
+                </div>
+                <button 
+                    onclick="db.deleteTakenPosition(${index})" 
+                    class="text-red-500 hover:text-red-700 ml-4"
+                >
+                    Delete
+                </button>
+            `;
+            takenPositionsContainer.appendChild(div);
+        });
+    }
+
     renderCalculationHistory() {
         const historyTableBody = document.getElementById('calculationHistoryTableBody');
         const historyTable = document.getElementById('calculationHistoryTable');
@@ -86,8 +160,8 @@ class CalculationDatabase {
             this.calculationHistory.forEach((calc, index) => {
                 const row = document.createElement('tr');
                 row.innerHTML = `
-                    <td class="py-1">${calc.ticker}</td>
-                    <td class="text-right">${new Date(calc.timestamp).toLocaleString()}</td>
+                    <td class="text-sm text-gray-500">${calc.inputString}</td>
+                    <td class="text-right">${new Date(calc.timestamp).toLocaleTimeString()}</td>
                     <td class="text-right">
                         <button 
                             onclick="showCalculationDetails(${index})" 
@@ -95,6 +169,18 @@ class CalculationDatabase {
                         >
                             View
                         </button>
+                        <button 
+                            onclick="db.takePosition(${index})" 
+                            class="text-green-500 hover:text-green-700 ml-2"
+                        >
+                            Take
+                        </button>
+                        <button 
+                onclick="db.deleteCalculation(${index})" 
+                class="text-red-500 hover:text-red-700 ml-2"
+            >
+                Delete
+            </button>
                     </td>
                 `;
                 historyTableBody.appendChild(row);
@@ -113,15 +199,20 @@ function showCalculationDetails(index) {
 
     const html = `
         <div class="bg-blue-50 p-4 rounded">
-            <h3 class="font-bold">#${calculation.ticker}</h3>
+            <h3 class="font-bold">
+                #${calculation.ticker}
+                <span class="text-gray-500 text-sm ml-2">(Input: ${calculation.inputString})</span>
+            </h3>
             <div class="mt-2">
                 <p>Size для каждого риска:</p>
                 <pre class="text-sm">${calculation.sizeResponse}</pre>
-                <p class="mt-2">Range: ${calculation.rangeValue.toFixed(2)}</p>
-                <p>Тейк: ${calculation.takeProfit.toFixed(4)}</p>
-                <p>Шорт - Stop: ${calculation.shortHigh.toFixed(4)}, Limit: ${calculation.shortLow.toFixed(4)}</p>
-                <p>Лонг - Stop: ${calculation.longHigh.toFixed(4)}, Limit: ${calculation.longLow.toFixed(4)}</p>
-                <p class="mt-2 text-gray-500">Calculated on: ${new Date(calculation.timestamp).toLocaleString()}</p>
+                <p class="mt-2">Range: <span class="copyable font-bold cursor-copy" onclick="copyToClipboard('${calculation.rangeValue.toFixed(2)}')">${calculation.rangeValue.toFixed(2)}</span></p>
+                <p>Тейк: <span class="copyable font-bold cursor-copy" onclick="copyToClipboard('${calculation.takeProfit.toFixed(4)}')">${calculation.takeProfit.toFixed(4)}</span></p>
+                <p>Шорт - Stop: <span class="copyable font-bold cursor-copy" onclick="copyToClipboard('${calculation.shortHigh.toFixed(4)}')">${calculation.shortHigh.toFixed(4)}</span>, 
+                Limit: <span class="copyable font-bold cursor-copy" onclick="copyToClipboard('${calculation.shortLow.toFixed(4)}')">${calculation.shortLow.toFixed(4)}</span></p>
+                <p>Лонг - Stop: <span class="copyable font-bold cursor-copy" onclick="copyToClipboard('${calculation.longHigh.toFixed(4)}')">${calculation.longHigh.toFixed(4)}</span>, 
+                Limit: <span class="copyable font-bold cursor-copy" onclick="copyToClipboard('${calculation.longLow.toFixed(4)}')">${calculation.longLow.toFixed(4)}</span></p>
+                <p class="mt-2 text-gray-500">Calculated on: ${new Date(calculation.timestamp).toLocaleTimeString()}</p>
             </div>
         </div>
     `;
@@ -172,9 +263,10 @@ function setRisk() {
 function calculateTrade() {
     const tickerInput = document.getElementById('tickerInput');
     const resultsContainer = document.getElementById('resultsContainer');
-    
-    const match = tickerInput.value.match(/([A-Z]+)\.([A-Z]+)\s+([-+]?\d*\.\d+|\d+)\s+([-+]?\d*\.\d+|\d+)/);
-    
+
+    const inputString = tickerInput.value.trim();
+    const match = inputString.match(/([A-Z]+)\.([A-Z]+)\s+([-+]?\d*\.\d+|\d+)\s+([-+]?\d*\.\d+|\d+)/);
+
     if (!match) {
         resultsContainer.innerHTML = '<p class="text-red-500">Invalid input format</p>';
         return;
@@ -183,7 +275,7 @@ function calculateTrade() {
     const [_a, ticker, exchange, highStr, lowStr] = match;
     const high = parseFloat(highStr);
     const low = parseFloat(lowStr);
-    
+
     const risks = db.getRisks();
     if (Object.keys(risks).length === 0) {
         resultsContainer.innerHTML = '<p class="text-red-500">No risk data available</p>';
@@ -205,7 +297,7 @@ function calculateTrade() {
 
     const html = `
         <div class="bg-blue-50 p-4 rounded">
-            <h3 class="font-bold">#<span class="copyable cursor-copy" onclick="copyToClipboard('${ticker}.${exchange}')">${ticker}.${exchange}</span></h3>
+            <h3 class="font-bold">#<span>${ticker}.${exchange}</span></h3>
             <div class="mt-2">
                 <p>Size для каждого риска:</p>
                 <pre class="text-sm">${sizeResponse}</pre>
@@ -221,7 +313,6 @@ function calculateTrade() {
 
     resultsContainer.innerHTML = html;
 
-    // Save to history
     db.addCalculationToHistory({
         ticker: `${ticker}.${exchange}`,
         high,
@@ -232,8 +323,8 @@ function calculateTrade() {
         longHigh,
         longLow,
         takeProfit,
-        sizeResponse
-    });
+        sizeResponse,
+    }, inputString);
 }
 
 function copyToClipboard(text) {

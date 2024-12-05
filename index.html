@@ -31,6 +31,16 @@
         <div id="resultsContainer" class="mt-4 p-4 bg-gray-50 rounded text-sm"></div>
 
         <div class="mt-6">
+            <h2 class="text-lg font-semibold mb-2">Taken Positions</h2>
+            <div 
+                id="takenPositionsContainer" 
+                class="border rounded p-4 bg-gray-50 max-h-48 overflow-y-auto text-sm"
+            >
+                <p id="noTakenPositionsMessage" class="text-gray-500">No positions taken yet</p>
+            </div>
+        </div>
+        
+        <div class="mt-6">
             <h2 class="text-lg font-semibold mb-2">Manage Risks</h2>
             <div class="space-y-2 sm:space-y-0 sm:space-x-2 sm:flex">
                 <input 
@@ -92,6 +102,21 @@
                     <tbody id="calculationHistoryTableBody"></tbody>
                 </table>
             </div>
+        </div>
+
+        <div class="mt-4 flex space-x-2">
+            <button 
+                onclick="db.clearAllCalculations()" 
+                class="w-full bg-red-500 text-white py-2 rounded hover:bg-red-600 transition-all"
+            >
+                Clear All Calculations
+            </button>
+            <button 
+                onclick="db.clearAllTakenPositions()" 
+                class="w-full bg-red-500 text-white py-2 rounded hover:bg-red-600 transition-all"
+            >
+                Clear All Taken Positions
+            </button>
         </div>
     </div>
 
