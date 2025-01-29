@@ -225,7 +225,7 @@ function roundToNearest100(value) {
 }
 
 function calculateValues(high, low, risk = null) {
-    const rangeValue = (high - low) * 100;
+    const rangeValue = Number((high - low) * 100).toPrecision(4);
     const sizeValue = risk ? (risk / rangeValue) * 100 : null;
     return [rangeValue, sizeValue];
 }
