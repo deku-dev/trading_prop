@@ -233,7 +233,7 @@ function calculateValues(high, low, risk = null) {
 function calculateShortPositions(high, low, rangeValue) {
     const shortHigh = low > 1 ? low - 0.01 : low - 0.001;
     const shortLow = 
-        (shortHigh - (shortHigh - (rangeValue / 2)) * 0.01) > high * 0.09
+        (shortHigh - (shortHigh - (rangeValue / 2) * 0.01)) > high * 0.09
         ? low * 0.91
         : shortHigh - (rangeValue / 2) * 0.01;
     return [shortHigh, shortLow];
